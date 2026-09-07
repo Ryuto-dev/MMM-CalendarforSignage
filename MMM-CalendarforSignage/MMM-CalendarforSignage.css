@@ -1,0 +1,444 @@
+/* ==================================================================
+   MMM-CalendarforSignage
+   「リビングの壁掛けカレンダー」をデジタル化するフルスクリーン専用モジュール。
+   フルHD (1920x1080) モニターを 2〜3m 離れて見ても読める文字サイズ・
+   コントラストを基準にデザインしている。
+   ================================================================== */
+
+.cfs-wrapper {
+  --cfs-radius: 18px;
+  --cfs-gap: 14px;
+
+  /* ダークテーマ（既定） */
+  --cfs-bg: #0b0e14;
+  --cfs-surface: #12161f;
+  --cfs-surface-2: #1a1f2b;
+  --cfs-border: rgba(255, 255, 255, 0.08);
+  --cfs-text: #f5f7fa;
+  --cfs-text-muted: #9aa3b2;
+  --cfs-text-faint: #5c6473;
+  --cfs-accent: #5b9dff;
+  --cfs-accent-soft: rgba(91, 157, 255, 0.18);
+  --cfs-sun: #ff6b81;
+  --cfs-sat: #5b9dff;
+  --cfs-max-events: 4;
+
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  box-sizing: border-box;
+  display: flex;
+  background: var(--cfs-bg);
+  color: var(--cfs-text);
+  font-family: "Hiragino Sans", "Noto Sans JP", "Segoe UI", system-ui, -apple-system, sans-serif;
+  overflow: hidden;
+}
+
+.cfs-wrapper * {
+  box-sizing: border-box;
+}
+
+.cfs-wrapper.cfs-theme-light {
+  --cfs-bg: #f4f6f9;
+  --cfs-surface: #ffffff;
+  --cfs-surface-2: #eef1f6;
+  --cfs-border: rgba(0, 0, 0, 0.08);
+  --cfs-text: #1c2230;
+  --cfs-text-muted: #5c6473;
+  --cfs-text-faint: #9aa3b2;
+  --cfs-accent: #2b6de0;
+  --cfs-accent-soft: rgba(43, 109, 224, 0.12);
+  --cfs-sun: #d9314a;
+  --cfs-sat: #2b6de0;
+}
+
+/* サイドパネルの左右位置は JS 側で DOM の追加順を切り替えることで制御している
+   （ここで flex-direction を反転させると二重反転してしまうため、常に通常順） */
+.cfs-wrapper.cfs-sidebar-left,
+.cfs-wrapper.cfs-sidebar-right {
+  flex-direction: row;
+}
+
+/* ── ローディング ─────────────────────────────── */
+
+.cfs-loading {
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.4vh;
+  color: var(--cfs-text-muted);
+}
+
+.cfs-spinner {
+  width: 4vh;
+  height: 4vh;
+  border: 0.4vh solid var(--cfs-border);
+  border-top-color: var(--cfs-accent);
+  border-radius: 50%;
+  animation: cfs-spin 0.9s linear infinite;
+}
+
+@keyframes cfs-spin {
+  to { transform: rotate(360deg); }
+}
+
+.cfs-loading-text {
+  font-size: 2vh;
+}
+
+/* ══════════════════════════════════════════════
+   サイドパネル
+   ══════════════════════════════════════════════ */
+
+.cfs-sidebar {
+  width: 24vw;
+  min-width: 340px;
+  max-width: 460px;
+  height: 100vh;
+  padding: 2.6vh 1.6vw;
+  display: flex;
+  flex-direction: column;
+  gap: 1.8vh;
+  background: var(--cfs-surface);
+  border-left: 1px solid var(--cfs-border);
+  overflow: hidden;
+}
+
+.cfs-sidebar-left .cfs-sidebar {
+  border-left: none;
+  border-right: 1px solid var(--cfs-border);
+}
+
+/* ── 時計 ─────────────────────────────── */
+
+.cfs-clock {
+  text-align: center;
+  padding-bottom: 1.6vh;
+  border-bottom: 1px solid var(--cfs-border);
+  flex-shrink: 0;
+}
+
+.cfs-clock-time {
+  font-size: 5.6vh;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.05;
+  font-feature-settings: "tnum";
+  font-variant-numeric: tabular-nums;
+}
+
+.cfs-clock-date {
+  margin-top: 0.6vh;
+  font-size: 2vh;
+  color: var(--cfs-text-muted);
+  font-weight: 500;
+}
+
+/* ── パネル共通 ─────────────────────────── */
+
+.cfs-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.cfs-today-panel {
+  flex: 0 1 auto;
+  max-height: 34vh;
+}
+
+.cfs-upcoming-panel {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.cfs-panel-heading {
+  font-size: 2vh;
+  font-weight: 700;
+  color: var(--cfs-text);
+  padding-bottom: 0.9vh;
+  margin-bottom: 0.8vh;
+  border-bottom: 2px solid var(--cfs-accent);
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.cfs-panel-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7vh;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.cfs-panel-body::-webkit-scrollbar {
+  display: none;
+}
+
+.cfs-empty-row {
+  color: var(--cfs-text-faint);
+  font-size: 1.7vh;
+  font-style: italic;
+  padding: 0.6vh 0.2vw;
+}
+
+.cfs-upcoming-date {
+  margin-top: 0.6vh;
+  font-size: 1.55vh;
+  font-weight: 700;
+  color: var(--cfs-text-muted);
+  letter-spacing: 0.02em;
+}
+
+.cfs-upcoming-date:first-child {
+  margin-top: 0;
+}
+
+/* ── 予定行 ─────────────────────────────── */
+
+.cfs-schedule-row {
+  --ev-color: #4285f4;
+  display: flex;
+  gap: 0.7vw;
+  align-items: stretch;
+  background: var(--cfs-surface-2);
+  border-radius: 10px;
+  padding: 0.9vh 0.9vw;
+}
+
+.cfs-schedule-row--compact {
+  padding: 0.6vh 0.8vw;
+  background: transparent;
+}
+
+.cfs-schedule-bar {
+  width: 4px;
+  border-radius: 3px;
+  background: var(--ev-color);
+  flex-shrink: 0;
+}
+
+.cfs-schedule-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15vh;
+  min-width: 0;
+  flex: 1;
+}
+
+.cfs-schedule-time {
+  font-size: 1.4vh;
+  font-weight: 600;
+  color: var(--cfs-text-muted);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.cfs-schedule-title {
+  font-size: 1.85vh;
+  font-weight: 600;
+  color: var(--cfs-text);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cfs-schedule-row--compact .cfs-schedule-title {
+  font-size: 1.65vh;
+}
+
+.cfs-schedule-loc {
+  font-size: 1.3vh;
+  color: var(--cfs-text-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── 凡例 ─────────────────────────────── */
+
+.cfs-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6vh 1.1vw;
+  padding-top: 1.4vh;
+  border-top: 1px solid var(--cfs-border);
+  flex-shrink: 0;
+}
+
+.cfs-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5vw;
+}
+
+.cfs-legend-dot {
+  width: 1.2vh;
+  height: 1.2vh;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.cfs-legend-label {
+  font-size: 1.5vh;
+  color: var(--cfs-text-muted);
+  font-weight: 500;
+}
+
+/* ══════════════════════════════════════════════
+   メイン：月表示グリッド（壁掛けカレンダー面）
+   ══════════════════════════════════════════════ */
+
+.cfs-main {
+  flex: 1 1 auto;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 2.6vh 2vw 2.4vh;
+  min-width: 0;
+}
+
+.cfs-month-header {
+  flex-shrink: 0;
+  margin-bottom: 1.4vh;
+}
+
+.cfs-month-title {
+  font-size: 4vh;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.cfs-weekday-header {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  flex-shrink: 0;
+  margin-bottom: 0.6vh;
+}
+
+.cfs-weekday-cell {
+  text-align: center;
+  font-size: 1.7vh;
+  font-weight: 700;
+  color: var(--cfs-text-muted);
+  padding-bottom: 0.8vh;
+  letter-spacing: 0.05em;
+}
+
+.cfs-weekday-cell.cfs-weekday-sun { color: var(--cfs-sun); }
+.cfs-weekday-cell.cfs-weekday-sat { color: var(--cfs-sat); }
+
+.cfs-month-grid {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  grid-template-rows: repeat(var(--cfs-weeks, 6), 1fr);
+  gap: 6px;
+  min-height: 0;
+}
+
+.cfs-day {
+  position: relative;
+  background: var(--cfs-surface);
+  border: 1px solid var(--cfs-border);
+  border-radius: 12px;
+  padding: 0.8vh 0.7vw 0.6vh;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.cfs-day-outside {
+  background: transparent;
+  border-color: transparent;
+  opacity: 0.35;
+}
+
+.cfs-day-past:not(.cfs-day-outside) {
+  opacity: 0.6;
+}
+
+.cfs-day-today {
+  background: var(--cfs-accent-soft);
+  border-color: var(--cfs-accent);
+}
+
+.cfs-day-number {
+  font-size: 2.05vh;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--cfs-text);
+  margin-bottom: 0.5vh;
+  flex-shrink: 0;
+}
+
+.cfs-day-sun .cfs-day-number { color: var(--cfs-sun); }
+.cfs-day-sat .cfs-day-number { color: var(--cfs-sat); }
+
+.cfs-day-today .cfs-day-number {
+  color: var(--cfs-accent);
+}
+
+.cfs-day-events {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3vh;
+  min-height: 0;
+  overflow: hidden;
+  flex: 1;
+}
+
+.cfs-event-chip {
+  --ev-color: #4285f4;
+  display: flex;
+  align-items: center;
+  height: 2.35vh;
+  min-height: 18px;
+  flex-shrink: 0;
+  border-radius: 5px;
+  border-left: 3px solid var(--ev-color);
+  background: color-mix(in srgb, var(--ev-color) 16%, transparent);
+  padding: 0 0.4vw;
+}
+
+.cfs-theme-light .cfs-event-chip {
+  background: color-mix(in srgb, var(--ev-color) 14%, white);
+}
+
+.cfs-event-chip-label {
+  font-size: 1.5vh;
+  font-weight: 600;
+  color: var(--cfs-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.cfs-day-more {
+  position: absolute;
+  bottom: 0.5vh;
+  right: 0.5vw;
+  font-size: 1.25vh;
+  font-weight: 700;
+  color: var(--cfs-text-muted);
+  background: var(--cfs-surface-2);
+  border-radius: 8px;
+  padding: 0.1vh 0.5vw;
+}
+
+/* ── 小さめの画面幅への簡易フォールバック（基本はフルHD想定） ─────── */
+
+@media (max-width: 1100px) {
+  .cfs-sidebar {
+    width: 30vw;
+    min-width: 260px;
+  }
+
+  .cfs-clock-time { font-size: 4.4vh; }
+  .cfs-month-title { font-size: 3.2vh; }
+}

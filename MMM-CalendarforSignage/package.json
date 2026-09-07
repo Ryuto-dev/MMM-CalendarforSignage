@@ -1,0 +1,25 @@
+{
+  "name": "MMM-CalendarforSignage",
+  "version": "1.0.0",
+  "description": "MagicMirror² module — 家族共有の予定(iCal)をリビングの壁掛けカレンダー感覚でフルスクリーン表示するデジタルサイネージ用カレンダー",
+  "main": "MMM-CalendarforSignage.js",
+  "keywords": [
+    "MagicMirror",
+    "module",
+    "calendar",
+    "iCal",
+    "ics",
+    "family calendar",
+    "digital signage",
+    "month-view"
+  ],
+  "license": "MIT",
+  "author": "Ryuto-dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Ryuto-dev/MMM-CalendarforSignage.git"
+  },
+  "dependencies": {
+    "node-ical": "^0.18.0"
+  }
+}
