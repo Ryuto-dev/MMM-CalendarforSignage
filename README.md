@@ -101,10 +101,13 @@ npm install
 |------------------------|--------------------------|----------------------------------------------------------------------|
 | `calendars`            | `[]`                     | `{ name, url, color }` の配列。表示するiCalソース                     |
 | `updateInterval`       | `600000`（10分）         | iCal再取得の間隔 (ms)                                                 |
+| `viewMode`             | `"month"`                | `"month"`（月表示・従来通り） / `"2weeks"`（今後2週間の大型表示）。旧コンフィグは未指定=月表示のまま |
+| `twoWeekDays`          | `14`                     | 2週間モードで表示する日数（既定14日）                                  |
 | `weekStartsOnMonday`   | `false`                  | `true` で月曜始まりの週レイアウト                                     |
 | `sidebarPosition`      | `"right"`                | サイドパネル（時計・予定一覧）の位置。`"left"` / `"right"`            |
 | `upcomingDays`         | `5`                      | 「直近の予定」に表示する日数（今日を除く）                            |
-| `maxEventsPerDay`      | `4`                      | 月表示1マスに表示する予定の最大数。超過分は `+N` 表示                  |
+| `maxEventsPerDay`      | `4`                      | 1マスに表示する予定の最大数。超過分は `+N` 表示（両モード共通の既定値） |
+| `maxEventsPerDayTwoWeeks` | `null`                | 2週間モード専用の1マス最大数。`null` の場合は `maxEventsPerDay` を使用（後方互換） |
 | `showLegend`           | `true`                   | カレンダーごとの色分け凡例を表示するか                                 |
 | `showSeconds`          | `false`                  | 時計に秒を表示するか                                                   |
 | `theme`                | `"dark"`                 | `"dark"` / `"light"`                                                  |
@@ -112,6 +115,28 @@ npm install
 | `locale`               | `"ja-JP"`                | 日付・時刻表記に使うロケール                                           |
 | `fadeSpeed`            | `800`                    | データ更新時のフェード速度 (ms)                                       |
 | `debug`                | `false`                  | デバッグログ出力                                                       |
+
+### 2週間モードについて
+
+フルHD 28型を約3m離れて見る想定の大型表示モードです。機能・レイアウト構成は月表示のまま、表示期間だけ「今日から14日間」に変わり、文字サイズ・マスの大きさが拡大されます。
+
+```javascript
+{
+  module: "MMM-CalendarforSignage",
+  position: "fullscreen_below",
+  config: {
+    calendars: [ /* 月表示と同じ */ ],
+    viewMode: "2weeks",   // これだけ追加すればOK（他は省略可・後方互換あり）
+    // twoWeekDays: 14,              // 日数を変えたい場合のみ
+    // maxEventsPerDayTwoWeeks: 6,   // 1マスの表示件数を2週間モードだけ増やしたい場合のみ
+  }
+}
+```
+
+- `viewMode` を指定しない既存コンフィグはすべて従来通り月表示になります（後方互換）。
+- `"2week"` / `"twoweeks"` / `"twoWeeks"` などの表記ゆれも `2weeks` として扱います。
+- ヘッダーは期間表示（例: `2026年9月 20日 – 26日`／月またぎ時は `9月27日(日) – 10月10日(土)`）＋「今後14日間」バッジになります。
+- 2週間モードのマス内チップは「開始時刻 – 終了時刻＋タイトル最大2行」のカード型で、月表示（1行チップ）より10〜12文字程度まで判読できます。月表示側の見た目は変わりません。
 
 ### `colorRules` について
 
