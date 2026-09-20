@@ -15,6 +15,17 @@ Module.register("MMM-CalendarforSignage", {
     // データ更新間隔 (ms)
     updateInterval: 10 * 60 * 1000,
 
+    // 表示モード: "month"（既定・従来通り月表示） / "2weeks"（今日から14日間の2週間表示）
+    // "2weeks" の表記ゆれ ("2week", "twoweeks", "twoWeeks", "two-weeks") も受け付ける
+    viewMode: "month",
+
+    // 2週間モードで表示する日数（既定 14 = 今後2週間）。13 などにすれば 13 日表示にもできる
+    twoWeekDays: 14,
+
+    // 2週間モードの1マスに表示する最大イベント数（超過分は "+N" バッジ）。
+    // null の場合は maxEventsPerDay にフォールバックする（後方互換のため）
+    maxEventsPerDayTwoWeeks: null,
+
     // 週の始まりを月曜にするか（false = 日曜始まり）
     weekStartsOnMonday: false,
 
@@ -67,9 +78,47 @@ Module.register("MMM-CalendarforSignage", {
     const now = new Date();
     this.viewYear = now.getFullYear();
     this.viewMonth = now.getMonth();
+    // 2週間モードの起点日（今日始まり）。日付変更時に更新する。
+    this.viewStartDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
     this.sendSocketNotification("CFS_INIT", this.config);
     this.scheduleMidnightRefresh();
+  },
+
+  // ── 表示モード関連ヘルパー ───────────────────────────────
+
+  // viewMode の表記ゆれを吸収して "month" / "2weeks" に正規化する。
+  // 旧コンフィグ（viewMode 未指定）は "month" になる = 後方互換。
+  normalizeViewMode() {
+    const raw = String(this.config.viewMode || "month")
+      .trim()
+      .toLowerCase()
+      .replace(/[-_\s]/g, "");
+    if (["2weeks", "2week", "twoweeks", "twoweek", "twoweekdays", "fortnight"].includes(raw)) {
+      return "2weeks";
+    }
+    return "month";
+  },
+
+  isTwoWeekMode() {
+    return this.normalizeViewMode() === "2weeks";
+  },
+
+  // 2週間モードの日数（1〜28 にクランプ、既定 14）
+  getTwoWeekDays() {
+    const n = parseInt(this.config.twoWeekDays, 10);
+    if (Number.isFinite(n)) return Math.min(28, Math.max(1, n));
+    return 14;
+  },
+
+  // モードごとの1マス最大表示件数。2週間モードで maxEventsPerDayTwoWeeks が
+  // 未指定 (null) なら maxEventsPerDay を使う = 旧コンフィグの見た目を変えない。
+  getEffectiveMaxEventsPerDay() {
+    if (this.isTwoWeekMode() && this.config.maxEventsPerDayTwoWeeks != null) {
+      const n = parseInt(this.config.maxEventsPerDayTwoWeeks, 10);
+      if (Number.isFinite(n) && n >= 1) return n;
+    }
+    return this.config.maxEventsPerDay ?? 4;
   },
 
   getStyles() {
@@ -97,6 +146,7 @@ Module.register("MMM-CalendarforSignage", {
       const today = new Date();
       this.viewYear = today.getFullYear();
       this.viewMonth = today.getMonth();
+      this.viewStartDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
       this.updateDom(0);
       this.scheduleMidnightRefresh();
     }, next - now);
@@ -108,7 +158,8 @@ Module.register("MMM-CalendarforSignage", {
     const wrapper = document.createElement("div");
     wrapper.className = `cfs-wrapper cfs-theme-${this.config.theme === "light" ? "light" : "dark"}`;
     wrapper.classList.add(this.config.sidebarPosition === "left" ? "cfs-sidebar-left" : "cfs-sidebar-right");
-    wrapper.style.setProperty("--cfs-max-events", String(this.config.maxEventsPerDay ?? 4));
+    wrapper.classList.add(this.isTwoWeekMode() ? "cfs-mode-2weeks" : "cfs-mode-month");
+    wrapper.style.setProperty("--cfs-max-events", String(this.getEffectiveMaxEventsPerDay()));
 
     if (!this.loaded) {
       wrapper.appendChild(this.buildLoading());
@@ -354,9 +405,15 @@ Module.register("MMM-CalendarforSignage", {
     const main = document.createElement("div");
     main.className = "cfs-main";
 
-    main.appendChild(this.buildMonthHeader());
-    main.appendChild(this.buildWeekdayHeader());
-    main.appendChild(this.buildMonthGrid());
+    if (this.isTwoWeekMode()) {
+      main.appendChild(this.buildTwoWeekHeader());
+      main.appendChild(this.buildWeekdayHeader());
+      main.appendChild(this.buildTwoWeekGrid());
+    } else {
+      main.appendChild(this.buildMonthHeader());
+      main.appendChild(this.buildWeekdayHeader());
+      main.appendChild(this.buildMonthGrid());
+    }
 
     return main;
   },
@@ -375,6 +432,84 @@ Module.register("MMM-CalendarforSignage", {
 
     header.appendChild(title);
     return header;
+  },
+
+  // ── 2週間モード：ヘッダー / 日付配列 / グリッド ──────────
+  // 今日を起点に twoWeekDays 日分（既定14日）を並べる。
+  // 月表示と違い、前後月の埋め草はない（すべて「期間内」扱い）。
+
+  getTwoWeekDates() {
+    const days = this.getTwoWeekDays();
+    const base = this.viewStartDate
+      ? new Date(this.viewStartDate)
+      : (() => {
+          const t = new Date();
+          return new Date(t.getFullYear(), t.getMonth(), t.getDate());
+        })();
+    base.setHours(0, 0, 0, 0);
+    const dates = [];
+    for (let i = 0; i < days; i++) {
+      const d = new Date(base);
+      d.setDate(base.getDate() + i);
+      dates.push(d);
+    }
+    return dates;
+  },
+
+  buildTwoWeekHeader() {
+    const dates = this.getTwoWeekDates();
+    const start = dates[0];
+    const end = dates[dates.length - 1];
+
+    const header = document.createElement("div");
+    header.className = "cfs-month-header cfs-twoweek-header";
+
+    const title = document.createElement("div");
+    title.className = "cfs-month-title";
+    const sameMonth = start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear();
+    const fmtDay = (d) =>
+      d.toLocaleDateString(this.config.locale, {
+        month: "long",
+        day: "numeric",
+        weekday: "short",
+      });
+    if (sameMonth) {
+      const monthLabel = start.toLocaleDateString(this.config.locale, {
+        year: "numeric",
+        month: "long",
+      });
+      title.textContent = `${monthLabel} ${start.getDate()}日 – ${end.getDate()}日`;
+    } else {
+      title.textContent = `${fmtDay(start)} – ${fmtDay(end)}`;
+    }
+
+    const badge = document.createElement("div");
+    badge.className = "cfs-twoweek-badge";
+    badge.textContent = `今後${dates.length}日間`;
+
+    header.appendChild(title);
+    header.appendChild(badge);
+    return header;
+  },
+
+  buildTwoWeekGrid() {
+    const dates = this.getTwoWeekDates();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const weeks = Math.ceil(dates.length / 7);
+
+    const grid = document.createElement("div");
+    grid.className = "cfs-month-grid cfs-twoweek-grid";
+    grid.style.setProperty("--cfs-weeks", String(weeks));
+
+    dates.forEach((date) => {
+      const isToday = date.getTime() === today.getTime();
+      // 起点が今日なので過去セルは原則出ないが、念のため当日より前は past 扱い
+      const isPast = date < today;
+      grid.appendChild(this.buildDayCell(date, { inMonth: true, isToday, isPast }));
+    });
+
+    return grid;
   },
 
   buildWeekdayHeader() {
@@ -457,7 +592,7 @@ Module.register("MMM-CalendarforSignage", {
     cell.appendChild(num);
 
     const eventsForDay = this.getEventsForDay(date);
-    const max = this.config.maxEventsPerDay ?? 4;
+    const max = this.getEffectiveMaxEventsPerDay();
 
     const eventsWrap = document.createElement("div");
     eventsWrap.className = "cfs-day-events";
@@ -483,6 +618,15 @@ Module.register("MMM-CalendarforSignage", {
     chip.className = "cfs-event-chip";
     chip.style.setProperty("--ev-color", this.getEventColor(ev));
     chip.title = ev.title;
+
+    // 2週間モードは遠見用に「時刻＋最大2行タイトル」のカード型にする。
+    // 月表示は従来の1行チップのまま（後方互換・見た目維持）。
+    if (this.isTwoWeekMode()) {
+      const time = document.createElement("div");
+      time.className = "cfs-event-chip-time";
+      time.textContent = this.formatTimeRange(ev);
+      chip.appendChild(time);
+    }
 
     const label = document.createElement("span");
     label.className = "cfs-event-chip-label";

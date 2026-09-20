@@ -431,6 +431,160 @@
   padding: 0.1vh 0.5vw;
 }
 
+/* ══════════════════════════════════════════════
+   2週間モード（遠くから見る大型表示）
+   フルHD 28型を約3m離れて見る想定で、月表示の見た目・機能はそのままに
+   文字とマスを大型化する。wrapper に付く .cfs-mode-2weeks で有効化。
+   旧コンフィグ（viewMode 未指定 = .cfs-mode-month）には一切影響しない。
+   ══════════════════════════════════════════════ */
+
+.cfs-twoweek-header {
+  display: flex;
+  align-items: baseline;
+  gap: 1.2vw;
+  flex-wrap: wrap;
+}
+
+.cfs-mode-2weeks .cfs-month-title {
+  font-size: 5vh;
+}
+
+.cfs-twoweek-badge {
+  font-size: 2vh;
+  font-weight: 700;
+  color: var(--cfs-accent);
+  background: var(--cfs-accent-soft);
+  border: 1px solid var(--cfs-accent);
+  border-radius: 999px;
+  padding: 0.4vh 1vw;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.cfs-mode-2weeks .cfs-weekday-cell {
+  font-size: 2.6vh;
+  padding-bottom: 1vh;
+}
+
+.cfs-mode-2weeks .cfs-month-grid {
+  gap: 10px;
+}
+
+.cfs-mode-2weeks .cfs-day {
+  border-radius: 16px;
+  padding: 1.2vh 1vw 1vh;
+  border-width: 2px;
+}
+
+.cfs-mode-2weeks .cfs-day-number {
+  font-size: 3.6vh;
+  margin-bottom: 0.8vh;
+}
+
+.cfs-mode-2weeks .cfs-day-events {
+  gap: 0.7vh;
+}
+
+/* 2週間モードのチップは「時刻＋タイトル最大2行」のカード型。
+   1行省略だった月表示と違い、1マス約190px幅でも10〜12文字程度まで読める。 */
+.cfs-mode-2weeks .cfs-event-chip {
+  height: auto;
+  min-height: 0;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 0.2vh;
+  border-left-width: 6px;
+  border-radius: 10px;
+  padding: 0.7vh 0.7vw 0.7vh 0.8vw;
+}
+
+.cfs-mode-2weeks .cfs-event-chip-time {
+  font-size: 1.7vh;
+  font-weight: 700;
+  color: var(--cfs-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.cfs-mode-2weeks .cfs-event-chip-label {
+  font-size: 2.5vh;
+  font-weight: 700;
+  line-height: 1.3;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.cfs-mode-2weeks .cfs-day-more {
+  font-size: 2vh;
+  padding: 0.3vh 0.8vw;
+  bottom: 0.8vh;
+  right: 0.8vw;
+}
+
+/* サイドパネルも遠見用に一段階拡大（構成・機能は月表示と同じ） */
+
+.cfs-mode-2weeks .cfs-clock-time {
+  font-size: 7vh;
+}
+
+.cfs-mode-2weeks .cfs-clock-date {
+  font-size: 2.6vh;
+}
+
+.cfs-mode-2weeks .cfs-panel-heading {
+  font-size: 2.8vh;
+}
+
+.cfs-mode-2weeks .cfs-schedule-row {
+  padding: 1.1vh 1vw;
+}
+
+.cfs-mode-2weeks .cfs-schedule-row--compact {
+  padding: 0.8vh 0.9vw;
+}
+
+.cfs-mode-2weeks .cfs-schedule-time {
+  font-size: 2vh;
+}
+
+.cfs-mode-2weeks .cfs-schedule-title {
+  font-size: 2.7vh;
+}
+
+.cfs-mode-2weeks .cfs-schedule-row--compact .cfs-schedule-title {
+  font-size: 2.5vh;
+}
+
+.cfs-mode-2weeks .cfs-schedule-loc {
+  font-size: 1.7vh;
+}
+
+.cfs-mode-2weeks .cfs-empty-row {
+  font-size: 2vh;
+}
+
+.cfs-mode-2weeks .cfs-upcoming-date {
+  font-size: 2vh;
+}
+
+.cfs-mode-2weeks .cfs-legend-label {
+  font-size: 1.8vh;
+}
+
+.cfs-mode-2weeks .cfs-legend-dot {
+  width: 1.6vh;
+  height: 1.6vh;
+}
+
 /* ── 小さめの画面幅への簡易フォールバック（基本はフルHD想定） ─────── */
 
 @media (max-width: 1100px) {

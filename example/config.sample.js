@@ -37,6 +37,12 @@ let config = {
         // データ更新間隔 (ミリ秒)
         updateInterval: 10 * 60 * 1000,
 
+        // 表示モード: "month"（既定・月表示） / "2weeks"（今日から14日間の大型表示）
+        // 旧コンフィグはこの項目なし = 月表示のまま（後方互換あり）
+        viewMode: "month", // "2weeks" にするとフルHD 28型を3m先から見る想定の大型2週間表示
+        // twoWeekDays: 14, // 2週間モードの日数（既定14）。変えたいときだけ指定
+        // maxEventsPerDayTwoWeeks: 6, // 2週間モードだけ1マスの表示件数を増やしたいとき用（null = maxEventsPerDayを使用）
+
         // 週の始まり（false = 日曜始まり / true = 月曜始まり）
         weekStartsOnMonday: false,
 

@@ -36,16 +36,31 @@ module.exports = NodeHelper.create({
     this.updateTimer = setInterval(() => this.fetchAll(), interval);
   },
 
-  // 取得ウィンドウ：今月の前後の余白 + 直近の予定表示に必要な分を広めに確保する。
-  // (前後1ヶ月分ぐらい余裕を持たせておけば、月表示グリッドと「もうすぐの予定」
-  //  パネルのどちらの計算にもフロント側でそのまま使い回せる)
+  // 取得ウィンドウ：今月の前後の余白 + 直近の予定表示 + 2週間モード表示に必要な分を
+  // 広めに確保する。(前後1ヶ月分ぐらい余裕を持たせておけば、月表示グリッドと
+  // 「もうすぐの予定」パネル・2週間グリッドのどちらの計算にもフロント側でそのまま使い回せる)
   getFetchWindow() {
     const now = new Date();
     const windowStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const twoWeekPad = this.normalizeTwoWeekDays();
     const upcomingPad = Math.max(this.config.upcomingDays || 7, 7) + 7;
     const windowEnd = new Date(now.getFullYear(), now.getMonth() + 2, 0);
-    windowEnd.setDate(windowEnd.getDate() + upcomingPad);
+    windowEnd.setDate(windowEnd.getDate() + Math.max(upcomingPad, twoWeekPad));
     return { windowStart, windowEnd };
+  },
+
+  // 2週間モードの日数（フロントの getTwoWeekDays と同等。fetch 時点では
+  // フロントの正規化を通せないためここでも独立に解釈する）
+  normalizeTwoWeekDays() {
+    const raw = String((this.config && this.config.viewMode) || "month")
+      .trim()
+      .toLowerCase()
+      .replace(/[-_\s]/g, "");
+    const isTwoWeeks = ["2weeks", "2week", "twoweeks", "twoweek", "twoweekdays", "fortnight"].includes(raw);
+    if (!isTwoWeeks) return 0;
+    const n = parseInt(this.config.twoWeekDays, 10);
+    if (Number.isFinite(n)) return Math.min(28, Math.max(1, n)) + 1;
+    return 15;
   },
 
   async fetchAll() {
