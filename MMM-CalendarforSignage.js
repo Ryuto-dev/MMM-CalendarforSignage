@@ -15,7 +15,7 @@ Module.register("MMM-CalendarforSignage", {
     // データ更新間隔 (ms)
     updateInterval: 10 * 60 * 1000,
 
-    // 表示モード: "month"（既定・従来通り月表示） / "2weeks"（今日から14日間の2週間表示）
+    // 表示モード: "month"（既定・従来通り月表示） / "2weeks"（今週＋来週の日曜始まり大型表示）
     // "2weeks" の表記ゆれ ("2week", "twoweeks", "twoWeeks", "two-weeks") も受け付ける
     viewMode: "month",
 
@@ -435,18 +435,22 @@ Module.register("MMM-CalendarforSignage", {
   },
 
   // ── 2週間モード：ヘッダー / 日付配列 / グリッド ──────────
-  // 今日を起点に twoWeekDays 日分（既定14日）を並べる。
+  // 今日を含む週の日曜始まりで twoWeekDays 日分（既定14日＝今週上段・来週下段）を並べる。
+  // 曜日ヘッダー（日〜土固定）とずれないよう、起点は常に「今週の日曜日」。
   // 月表示と違い、前後月の埋め草はない（すべて「期間内」扱い）。
 
   getTwoWeekDates() {
     const days = this.getTwoWeekDays();
-    const base = this.viewStartDate
+    const today = this.viewStartDate
       ? new Date(this.viewStartDate)
       : (() => {
           const t = new Date();
           return new Date(t.getFullYear(), t.getMonth(), t.getDate());
         })();
-    base.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+    // 今週の日曜日まで巻き戻す（2週間モードは常に日曜始まり）
+    const base = new Date(today);
+    base.setDate(today.getDate() - today.getDay());
     const dates = [];
     for (let i = 0; i < days; i++) {
       const d = new Date(base);
@@ -485,7 +489,7 @@ Module.register("MMM-CalendarforSignage", {
 
     const badge = document.createElement("div");
     badge.className = "cfs-twoweek-badge";
-    badge.textContent = `今後${dates.length}日間`;
+    badge.textContent = dates.length === 14 ? "今週・来週" : `${dates.length}日間`;
 
     header.appendChild(title);
     header.appendChild(badge);
@@ -504,7 +508,7 @@ Module.register("MMM-CalendarforSignage", {
 
     dates.forEach((date) => {
       const isToday = date.getTime() === today.getTime();
-      // 起点が今日なので過去セルは原則出ないが、念のため当日より前は past 扱い
+      // 日曜始まりのため今週の今日より前は past 扱い（今日ハイライトは維持）
       const isPast = date < today;
       grid.appendChild(this.buildDayCell(date, { inMonth: true, isToday, isPast }));
     });
@@ -513,7 +517,9 @@ Module.register("MMM-CalendarforSignage", {
   },
 
   buildWeekdayHeader() {
-    const days = this.config.weekStartsOnMonday
+    // 2週間モードはグリッドが常に日曜始まりのため、ヘッダーも日曜始まりに固定する
+    const monday = this.config.weekStartsOnMonday && !this.isTwoWeekMode();
+    const days = monday
       ? ["月", "火", "水", "木", "金", "土", "日"]
       : ["日", "月", "火", "水", "木", "金", "土"];
 
@@ -522,10 +528,10 @@ Module.register("MMM-CalendarforSignage", {
     days.forEach((d, i) => {
       const cell = document.createElement("div");
       cell.className = "cfs-weekday-cell";
-      if (!this.config.weekStartsOnMonday && i === 0) cell.classList.add("cfs-weekday-sun");
-      if (!this.config.weekStartsOnMonday && i === 6) cell.classList.add("cfs-weekday-sat");
-      if (this.config.weekStartsOnMonday && i === 5) cell.classList.add("cfs-weekday-sat");
-      if (this.config.weekStartsOnMonday && i === 6) cell.classList.add("cfs-weekday-sun");
+      if (!monday && i === 0) cell.classList.add("cfs-weekday-sun");
+      if (!monday && i === 6) cell.classList.add("cfs-weekday-sat");
+      if (monday && i === 5) cell.classList.add("cfs-weekday-sat");
+      if (monday && i === 6) cell.classList.add("cfs-weekday-sun");
       cell.textContent = d;
       row.appendChild(cell);
     });
